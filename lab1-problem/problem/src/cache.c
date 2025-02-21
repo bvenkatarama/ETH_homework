@@ -70,7 +70,7 @@ uint32_t cache_read(cache_unit* cache, uint32_t addr){
     uint32_t read_data = 0;
     bool cache_miss = false;
 
-    // printf("I'm in cache!");
+    printf("I'm in cache!\n");
     
     // access the cache
     for(int i=0; i<ways; i++){
@@ -79,6 +79,7 @@ uint32_t cache_read(cache_unit* cache, uint32_t addr){
         if(block->valid == false){
             if(rd_done) break;
             else{
+                printf("cache invalid block - miss!\n");
                 rd_done = true;
                 block->valid = true;
                 block->tag = tag;
@@ -94,6 +95,8 @@ uint32_t cache_read(cache_unit* cache, uint32_t addr){
             if(rd_done) block->lru++;                   // Already read-done --> just update lru
             else{
                 if(tag != block->tag){
+                    printf("tag value - Expected = %u, Given = %u\t", tag, block->tag);                    
+                    printf("tag not matching! not yet decided if hit or miss!\n");
                     block->lru++;                       // tag ain't matching --> just update
                     if(block->lru > max_lru){
                         evict_way = i;
@@ -101,6 +104,8 @@ uint32_t cache_read(cache_unit* cache, uint32_t addr){
                     }
                 }
                 else{
+                    printf("tag value - Expected = %u, Given = %u\t", tag, block->tag);
+                    printf("cache hit!\n");
                     rd_done = true;
                     block->lru = 0;                     // tag matching --> block reused
                     // read-data
@@ -112,6 +117,7 @@ uint32_t cache_read(cache_unit* cache, uint32_t addr){
     }
 
     if(rd_done == false){
+        printf("cache miss - eviction! - evicted block = %u\n", evict_way);
         cache_block* block = &cache->set[idx].way[evict_way];
         block->lru = 0;
         block->tag = tag;

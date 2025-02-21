@@ -10,6 +10,7 @@
 #define _PIPE_H_
 
 #include "shell.h"
+#include "cache.h"
 
 /* Pipeline ops (instances of this structure) are high-level representations of
  * the instructions that actually flow through the pipeline. This struct does
@@ -66,7 +67,6 @@ typedef struct Pipe_Op {
  * and the stage must not overwrite its output (otherwise an instruction would
  * be lost).
  */
-
 typedef struct Pipe_State {
     /* pipe op currently at the input of the given stage (NULL for none) */
     Pipe_Op *decode_op, *execute_op, *mem_op, *wb_op;
@@ -89,6 +89,10 @@ typedef struct Pipe_State {
     int multiplier_stall; /* number of remaining cycles until HI/LO are ready */
 
     /* place other information here as necessary */
+
+    /* memory-access stall*/
+    int icache_stall;
+    int dcache_stall;
 
 } Pipe_State;
 

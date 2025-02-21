@@ -14,7 +14,10 @@
 #include <stdlib.h>
 #include <assert.h>
 
-//#define DEBUG
+// Adding the caches
+#include "cache.h"
+
+// #define DEBUG
 
 /* debug */
 void print_op(Pipe_Op *op)
@@ -29,11 +32,13 @@ void print_op(Pipe_Op *op)
 
 /* global pipeline state */
 Pipe_State pipe;
+cache_unit *icache;
 
 void pipe_init()
 {
     memset(&pipe, 0, sizeof(Pipe_State));
     pipe.PC = 0x00400000;
+    icache = init_cache(I_BLOCK_SIZE, I_WAYS, I_SETS);
 }
 
 void pipe_cycle()
@@ -675,7 +680,15 @@ void pipe_stage_fetch()
     memset(op, 0, sizeof(Pipe_Op));
     op->reg_src1 = op->reg_src2 = op->reg_dst = -1;
 
-    op->instruction = mem_read_32(pipe.PC);
+    //op->instruction = mem_read_32(pipe.PC);
+    //stat_cycles+=50;
+    
+    op->instruction = cache_read(icache, pipe.PC);
+    
+    // Keep stalling until cache_hit
+    // if(icache->mdata.cache_miss == true)
+    //     return;
+    
     op->pc = pipe.PC;
     pipe.decode_op = op;
 
