@@ -25,7 +25,6 @@ typedef struct{
     uint32_t block_size;
     uint32_t ways;
     uint32_t sets;
-    // bool cache_miss;
 } cache_mdata;
 
 // structure to hold a cache_block
@@ -54,10 +53,10 @@ extern cache_unit* icache;
 
 // Member functions
 cache_unit* init_cache(uint32_t, uint32_t, uint32_t);
-void dealloc_cache(cache_unit*, uint32_t, uint32_t, uint32_t);
 void fill_block(cache_unit*, uint32_t, int, uint32_t);
 uint32_t cache_read(cache_unit*, uint32_t);
 void cache_write(cache_unit*, uint32_t, uint32_t);
+void evict_block(cache_unit*, uint32_t, int);
 
 // Utility function - clog2
 uint32_t clog2(uint32_t);

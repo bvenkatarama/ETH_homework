@@ -684,11 +684,7 @@ void pipe_stage_fetch()
     //stat_cycles+=50;
     
     op->instruction = cache_read(icache, pipe.PC);
-    
-    // Keep stalling until cache_hit
-    // if(icache->mdata.cache_miss == true)
-    //     return;
-    
+      
     op->pc = pipe.PC;
     pipe.decode_op = op;
 

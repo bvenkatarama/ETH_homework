@@ -29,9 +29,30 @@ cache_unit* init_cache(uint32_t block_size, uint32_t ways, uint32_t sets){
     cache->mdata.block_size = block_size;
     cache->mdata.ways = ways;
     cache->mdata.sets = sets;
-    // cache->mdata.cache_miss = false;
 
     return cache;
+}
+
+void evict_block(cache_unit* cache, uint32_t idx, int w){
+    cache_block* block = &cache->set[idx].way[w];
+
+    // Don't write back into memory if not dirty
+    if(block->dirty == false)
+        return;
+    
+    // Evicted block populated back into memory
+    else{
+        printf("Eviction procedure started!\n");
+        uint32_t sets = cache->mdata.sets;
+        uint32_t block_size = cache->mdata.block_size;
+        uint32_t tag = block->tag;
+        uint32_t evict_addr = (tag<<(clog2(sets)+clog2(block_size))) | (idx<<clog2(block_size));
+
+        for(int m=evict_addr; m<(evict_addr + block_size); ){
+            mem_write_32(m, block->value[m-evict_addr]);
+            m+=4;
+        }
+    }
 }
 
 void fill_block(cache_unit* cache, uint32_t idx, int w, uint32_t mem_addr){
@@ -44,16 +65,6 @@ void fill_block(cache_unit* cache, uint32_t idx, int w, uint32_t mem_addr){
 }
 
 uint32_t cache_read(cache_unit* cache, uint32_t addr){
-    // Stall in case of cache miss
-    // if(pipe.icache_stall > 0){
-    //     pipe.icache_stall--;
-    //     return;
-    // }
-
-    // else if(cache->mdata.cache_miss == true){
-    //     cache->mdata.cache_miss = false;
-
-    // }
     // Meta-data values
     uint32_t block_size = cache->mdata.block_size;
     uint32_t ways = cache->mdata.ways;
@@ -62,16 +73,18 @@ uint32_t cache_read(cache_unit* cache, uint32_t addr){
     // cache-index calculation
     uint32_t idx = (addr>>clog2(block_size)) & (sets-1);    //0x3F = 63 (#sets - 1)
     uint32_t mem_addr = addr & (-1U<<clog2(block_size));    //0x1F = 31 (block_size-1)
-    uint32_t tag = addr>>(sets+block_size);
+    uint32_t tag = addr>>(clog2(sets)+clog2(block_size));
     uint32_t offset = addr & (block_size-1);
 
     bool rd_done = false;
     uint8_t evict_way=0, max_lru=0;
     uint32_t read_data = 0;
     bool cache_miss = false;
-
-    printf("I'm in cache!\n");
     
+    // Performing check
+    printf("I'm in cache!\t");
+    printf("addr=%u, set=%d, tag=%u, offset=%u\n", addr, idx, tag, offset);
+
     // access the cache
     for(int i=0; i<ways; i++){
         cache_block* block = &cache->set[idx].way[i];
@@ -87,6 +100,10 @@ uint32_t cache_read(cache_unit* cache, uint32_t addr){
                 fill_block(cache, idx, i, mem_addr);    //TODO: Can make it better?
                 read_data = block->value[offset];
                 cache_miss = true;
+
+                // Performing check
+                uint32_t temp = mem_read_32(addr);
+                printf("cache_data = %u, mem_data=%u\n", read_data, temp);
             }
         }
 
@@ -95,7 +112,7 @@ uint32_t cache_read(cache_unit* cache, uint32_t addr){
             if(rd_done) block->lru++;                   // Already read-done --> just update lru
             else{
                 if(tag != block->tag){
-                    printf("tag value - Expected = %u, Given = %u\t", tag, block->tag);                    
+                    printf("tag value - Expected = %u, In_cache = %u\t", tag, block->tag);                    
                     printf("tag not matching! not yet decided if hit or miss!\n");
                     block->lru++;                       // tag ain't matching --> just update
                     if(block->lru > max_lru){
@@ -110,6 +127,10 @@ uint32_t cache_read(cache_unit* cache, uint32_t addr){
                     block->lru = 0;                     // tag matching --> block reused
                     // read-data
                     read_data = block->value[offset];
+
+                    // Performing check
+                    uint32_t temp = mem_read_32(addr);
+                    printf("cache_data = %u, mem_data=%u\n", read_data, temp);
                 }
             }
         }
@@ -119,14 +140,23 @@ uint32_t cache_read(cache_unit* cache, uint32_t addr){
     if(rd_done == false){
         printf("cache miss - eviction! - evicted block = %u\n", evict_way);
         cache_block* block = &cache->set[idx].way[evict_way];
+        evict_block(cache, idx, evict_way);
+        fill_block(cache, idx, evict_way, mem_addr);
         block->lru = 0;
         block->tag = tag;
-        fill_block(cache, idx, evict_way, mem_addr);
         read_data = block->value[offset];
         cache_miss = true;
+
+        // Performing check
+        uint32_t temp = mem_read_32(addr);
+        printf("cache_data = %u, mem_data=%u\n", read_data, temp);
     }
 
-    if(cache_miss)  stat_cycles+=50;
+    if(cache_miss){
+        // Check performed
+        stat_cycles+=50;
+        printf("Added 50 cycle delay!\n");
+    }
 
     return read_data;
 }
@@ -172,21 +202,3 @@ uint32_t clog2(uint32_t x){
     }
     return logx;
 }
-
-// De-allocate cache
-// void dealloc_cache(cache_unit* cache, uint32_t block_size, uint32_t ways, uint32_t sets){
-//     for(int i=0; i<sets; i++){
-//         for(int j=0; j<ways; j++){
-//             free(cache->set[i].way[j].value);
-//             cache->set[i].way[j].value = NULL;
-//         }
-//         free(cache->set[i].way);
-//         cache->set[i].way = NULL;
-//     }
-
-//     free(cache->set);
-//     cache->set = NULL;
-
-//     free(cache);
-//     cache = NULL;
-// }
