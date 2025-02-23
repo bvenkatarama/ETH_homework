@@ -112,42 +112,34 @@ uint32_t cache_read(cache_unit* cache, uint32_t addr){
                 uint32_t temp = mem_read_32(addr);
                 printf("cache_data = %u, mem_data=%u\n", read_data, temp);
             }
-
-            // encounters valid block
-            else{
-                if(tag != block->tag){
-                    printf("tag value - Expected = %u, In_cache = %u\t", tag, block->tag);                    
-                    printf("tag not matching! not yet decided if hit or miss!\n");
-                    block->lru++;                       // tag ain't matching --> just update
-                    if(block->lru > max_lru){
-                        evict_way = i;
-                        max_lru = block->lru;
-                    }
-                }
-                else{
-                    printf("tag value - Expected = %u, In_cache = %u\t", tag, block->tag);
-                    printf("cache hit!\n");
-                    rd_done = true;
-                    block->lru = 0;                     // tag matching --> block reused
-                    // read-data
-                    read_data = block->value[offset];
-
-                    // Performing check
-                    uint32_t temp = mem_read_32(addr);
-                    printf("cache_data = %u, mem_data=%u\n", read_data, temp);
-                }
-            }
-
         }
 
-        if(rd_done == false){
-            printf("cache miss - eviction! - evicted block = %u\n", evict_way);
-            cache_block* block = &cache->set[idx].way[evict_way];
-            evict_block(cache, idx, evict_way);
-            fill_block(cache, idx, evict_way, mem_addr);
-            block->lru = 0;
-            block->tag = tag;        
-            read_data = block->value[offset];
+        // encounters valid block
+        else{
+            if(tag != block->tag){
+                printf("tag value - Expected = %u, In_cache = %u\t", tag, block->tag);                    
+                printf("tag not matching! not yet decided if hit or miss!\n");
+                block->lru++;                       // tag ain't matching --> just update
+                if(block->lru > max_lru){
+                    evict_way = i;
+                    max_lru = block->lru;
+                }
+            }
+            else{
+                printf("tag value - Expected = %u, In_cache = %u\t", tag, block->tag);
+                printf("cache hit!\n");
+                rd_done = true;
+                block->lru = 0;                     // tag matching --> block reused
+                // read-data
+                read_data = block->value[offset];
+
+                // Performing check
+                uint32_t temp = mem_read_32(addr);
+                printf("cache_data = %u, mem_data=%u\n", read_data, temp);
+            }
+        }
+    }
+    
 
     if(rd_done == false){
         printf("cache miss - eviction! - evicted block = %u\n", evict_way);
