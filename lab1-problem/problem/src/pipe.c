@@ -32,13 +32,14 @@ void print_op(Pipe_Op *op)
 
 /* global pipeline state */
 Pipe_State pipe;
-cache_unit *icache;
+cache_unit *icache, *dcache;
 
 void pipe_init()
 {
     memset(&pipe, 0, sizeof(Pipe_State));
     pipe.PC = 0x00400000;
     icache = init_cache(I_BLOCK_SIZE, I_WAYS, I_SETS);
+    dcache = init_cache(D_BLOCK_SIZE, D_WAYS, D_SETS);
 }
 
 void pipe_cycle()
@@ -149,8 +150,13 @@ void pipe_stage_mem()
     Pipe_Op *op = pipe.mem_op;
 
     uint32_t val = 0;
-    if (op->is_mem)
-        val = mem_read_32(op->mem_addr & ~3);
+    if (op->is_mem){
+        // val = mem_read_32(op->mem_addr & ~3);
+        // stat_cycles+=50;
+
+        uint32_t addr = op->mem_addr & ~3;
+        val = cache_read(dcache, addr);
+    }
 
     switch (op->opcode) {
         case OP_LW:
@@ -207,7 +213,9 @@ void pipe_stage_mem()
                 case 3: val = (val & 0x00FFFFFF) | ((op->mem_value & 0xFF) << 24); break;
             }
 
-            mem_write_32(op->mem_addr & ~3, val);
+            // mem_write_32(op->mem_addr & ~3, val);
+            // stat_cycles += 50;
+            cache_write(dcache, op->mem_addr & ~3, val);
             break;
 
         case OP_SH:
@@ -222,12 +230,16 @@ void pipe_stage_mem()
             printf("new word %08x\n", val);
 #endif
 
-            mem_write_32(op->mem_addr & ~3, val);
+            // mem_write_32(op->mem_addr & ~3, val);
+            // stat_cycles += 50;
+            cache_write(dcache, op->mem_addr & ~3, val);
             break;
 
         case OP_SW:
             val = op->mem_value;
-            mem_write_32(op->mem_addr & ~3, val);
+            // mem_write_32(op->mem_addr & ~3, val);
+            // stat_cycles += 50;
+            cache_write(dcache, op->mem_addr & ~3, val);
             break;
     }
 
@@ -680,8 +692,8 @@ void pipe_stage_fetch()
     memset(op, 0, sizeof(Pipe_Op));
     op->reg_src1 = op->reg_src2 = op->reg_dst = -1;
 
-    //op->instruction = mem_read_32(pipe.PC);
-    //stat_cycles+=50;
+    // op->instruction = mem_read_32(pipe.PC);
+    // stat_cycles+=50;
     
     op->instruction = cache_read(icache, pipe.PC);
       

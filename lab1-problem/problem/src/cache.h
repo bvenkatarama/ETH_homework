@@ -34,6 +34,7 @@ typedef struct{
     uint32_t tag;
     uint8_t lru;
     uint32_t* value;
+    uint32_t addr;
 } cache_block;
 
 // structure to hold a cache_line
@@ -50,6 +51,7 @@ typedef struct{
 } cache_unit;
 
 extern cache_unit* icache;
+extern cache_unit* dcache;
 
 // Member functions
 cache_unit* init_cache(uint32_t, uint32_t, uint32_t);
